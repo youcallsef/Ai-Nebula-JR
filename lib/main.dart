@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
 void main() {
   runApp(const NebulaApp());
@@ -170,7 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
   }
 }
 
-// 2. إدارة النماذج والذاكرة والاتصال
+// 2. إدارة النماذج والذاكرة والاتصال السحابي
 enum AIModel { llama33, geminiFlash, gemma2 }
 
 class ChatMessage {
@@ -189,15 +188,6 @@ class AIService {
     required bool isImageRequest,
   }) async {
     try {
-      final List<ConnectivityResult> connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult.contains(ConnectivityResult.none)) {
-        return "عذراً، لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة والمحاولة مرة أخرى.";
-      }
-    } catch (_) {
-      // تجاوز الخطأ في حال دعم المنصة لفحص مختلف
-    }
-
-    try {
       if (isImageRequest) {
         return "🎨 تم استلام طلب توليد الصورة بنجاح عبر السحابة.";
       }
@@ -211,7 +201,7 @@ class AIService {
           return await _callGeminiApi(history);
       }
     } catch (e) {
-      return "حدث خطأ أثناء الاتصال بالسيرفر: ${e.toString()}";
+      return "عذراً، حدث خطأ في الاتصال (تأكد من اتصالك بالإنترنت أو صحة الـ API Key): ${e.toString()}";
     }
   }
 
@@ -241,7 +231,7 @@ class AIService {
       final data = jsonDecode(response.body);
       return data['choices'][0]['message']['content'];
     } else {
-      throw Exception('خطأ في استجابة الخادم (${response.statusCode})');
+      throw Exception('خطأ في الخادم (${response.statusCode})');
     }
   }
 

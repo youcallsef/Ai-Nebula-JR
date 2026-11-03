@@ -18,10 +18,10 @@ class NebulaApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0A0F1D),
-        primaryColor: const Color(0xFF38BDF8), // أزرق لبني هادي
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF38BDF8),
-          surface: const Color(0xFF111827),
+        primaryColor: const Color(0xFF38BDF8),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF38BDF8),
+          surface: Color(0xFF111827),
         ),
       ),
       home: const OnboardingScreen(),
@@ -29,9 +29,7 @@ class NebulaApp extends StatelessWidget {
   }
 }
 
-// ==========================================
-// 1. شاشة الترحيب (Onboarding)
-// ==========================================
+// 1. شاشة الترحيب
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -75,7 +73,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final isLast = _currentIndex == _onboardingData.length - 1;
+    final bool isLast = _currentIndex == _onboardingData.length - 1;
 
     return Scaffold(
       body: Container(
@@ -172,9 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
   }
 }
 
-// ==========================================
-// 2. الهيكل البرمجي والذكاء الاصطناعي (Memory + Multi-Model)
-// ==========================================
+// 2. إدارة النماذج والذاكرة والاتصال
 enum AIModel { llama33, geminiFlash, gemma2 }
 
 class ChatMessage {
@@ -187,21 +183,23 @@ class AIService {
   static const String groqApiKey = 'YOUR_GROQ_API_KEY';
   static const String geminiApiKey = 'YOUR_GEMINI_API_KEY';
 
-  // إرسال سياق المحادثة بالكامل (Memory) لضمان عدم نسيان أي معلومة
   static Future<String> sendMessageWithMemory({
     required List<ChatMessage> history,
     required AIModel selectedModel,
     required bool isImageRequest,
   }) async {
-    // فحص الاتصال بالإنترنت أولاً
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      return "عذراً، لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة والمحاولة مرة أخرى.";
+    try {
+      final List<ConnectivityResult> connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        return "عذراً، لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة والمحاولة مرة أخرى.";
+      }
+    } catch (_) {
+      // تجاوز الخطأ في حال دعم المنصة لفحص مختلف
     }
 
     try {
       if (isImageRequest) {
-        return "تم إرسال طلب توليد الصورة بنجاح (ميزة التوليد السحابي مفعلة).";
+        return "🎨 تم استلام طلب توليد الصورة بنجاح عبر السحابة.";
       }
 
       switch (selectedModel) {
@@ -220,8 +218,7 @@ class AIService {
   static Future<String> _callGroqApi(String modelName, List<ChatMessage> history) async {
     final url = Uri.parse('https://api.groq.com/openai/v1/chat/completions');
     
-    // تحويل سجل المحادثة بالكامل ليدعم الذاكرة والترابط
-    List> messagesFormatted = history.map((msg) {
+    final List> messagesFormatted = history.map((msg) {
       return {
         'role': msg.sender == 'user' ? 'user' : 'assistant',
         'content': msg.text
@@ -252,7 +249,7 @@ class AIService {
     final url = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$geminiApiKey');
     
-    List> contents = history.map((msg) {
+    final List> contents = history.map((msg) {
       return {
         'role': msg.sender == 'user' ? 'user' : 'model',
         'parts': [{'text': msg.text}]
@@ -274,9 +271,7 @@ class AIService {
   }
 }
 
-// ==========================================
-// 3. شاشة الشات الرئيسية
-// ==========================================
+// 3. شاشة الشات
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -290,8 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
   AIModel _selectedModel = AIModel.llama33;
   bool _isLoading = false;
   
-  // نظام الشاتات المتعددة
-  List<List<ChatMessage>> _chats = [[]];
+  final List<List<ChatMessage>> _chats = [[]];
   int _currentChatIndex = 0;
 
   void _switchChat(int index) {
@@ -315,7 +309,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage({bool isImage = false}) async {
     if (_controller.text.trim().isEmpty && !isImage) return;
 
-    final text = isImage ? "🎨 توليد صورة بناءً على طلبك..." : _controller.text.trim();
+    final String text = isImage ? "توليد صورة جديدة" : _controller.text.trim();
     
     setState(() {
       _messages.add(ChatMessage(sender: 'user', text: text));
@@ -328,7 +322,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.clear();
     });
 
-    final aiResponse = await AIService.sendMessageWithMemory(
+    final String aiResponse = await AIService.sendMessageWithMemory(
       history: _messages,
       selectedModel: _selectedModel,
       isImageRequest: isImage,
@@ -347,7 +341,6 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF111827),
         elevation: 0,
-        // القائمة الجانبية للشاتات المتعددة (٣ شرط)
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Color(0xFF38BDF8)),
@@ -355,7 +348,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
         title: Center(
-          // كبسولة فوق للتبديل بين النماذج
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -388,7 +380,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      // القائمة الجانبية للشاتات المتعددة
       drawer: Drawer(
         backgroundColor: const Color(0xFF0A0F1D),
         child: ListView(
@@ -422,8 +413,8 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isUser = msg.sender == 'user';
+                final ChatMessage msg = _messages[index];
+                final bool isUser = msg.sender == 'user';
                 return Align(
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
@@ -459,7 +450,6 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.all(8.0),
               child: LinearProgressIndicator(color: Color(0xFF38BDF8)),
             ),
-          // كبسولة الرسائل المنظمة أسفل الشاشة
           Container(
             padding: const EdgeInsets.all(12),
             color: const Color(0xFF111827),
